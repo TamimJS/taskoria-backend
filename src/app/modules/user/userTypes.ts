@@ -40,6 +40,9 @@ export const UserSelect = {
 	updatedAt: true
 } as const;
 
+// For the where search clause
+export type UserWhereClause = Prisma.UserWhereInput;
+
 // Payloads (DTOs = Data Transfer Objects) - coming into the service/controller
 export type CreateUserDTO = {
 	firstName: string;

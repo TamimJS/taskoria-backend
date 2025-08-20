@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { fromPrisma } from '../errors/errorsMapper';
 import getErrorResponse from '../lib/errorResponse';
 import AppError, { InternalServerError } from '../errors';
+import config from '@/config';
 
 /**
  * Final error handler: every thrown error ends here.
@@ -27,6 +28,11 @@ export function errorHandler() {
 
 		// AppError? Great, respond with its data
 		if (err instanceof AppError) {
+			// Log operational errors only in development or if they're 5xx
+			if (config.NODE_ENV === 'development' || err.status >= 500) {
+				console.error('[AppError]', { err });
+			}
+
 			return getErrorResponse(res, {
 				status: err.status,
 				code: err.code,
@@ -37,12 +43,29 @@ export function errorHandler() {
 		}
 
 		// Unknown/unexpected error — do not leak details to clients
-		console.error('[UnhandledError]', { err });
+		console.error('[UnhandledError]', {
+			message: err instanceof Error ? err.message : 'Unknown Error',
+			stack: err instanceof Error ? err.stack : undefined,
+			url: req.url,
+			method: req.method
+		});
+
 		const internal = new InternalServerError();
+		const message =
+			config.NODE_ENV === 'production'
+				? internal.message
+				: err instanceof Error
+				? err.message
+				: 'Unknown Error';
+
 		return getErrorResponse(res, {
 			status: internal.status,
 			code: internal.code,
-			message: internal.message
+			message,
+			meta:
+				config.NODE_ENV === 'development'
+					? { originalError: String(err) }
+					: undefined
 		});
 	};
 }

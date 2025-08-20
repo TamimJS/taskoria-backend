@@ -29,7 +29,7 @@ class Server {
 		});
 	}
 
-	private initializeMiddlewares(): void {
+	private setupMiddlewares(): void {
 		this.app.use(helmet());
 		this.app.use(
 			cors({
@@ -38,15 +38,15 @@ class Server {
 			})
 		);
 		// this.app.use(pinoHttp({ logger }));
-		this.app.use(express.json());
+		this.app.use(express.json({ limit: '1mb' }));
 		this.app.use(express.urlencoded({ extended: true }));
 	}
 
-	private mountModules(): void {
+	private setupModules(): void {
 		this.modules.user = CreateUserModule({ prisma: this.deps.prisma });
 	}
 
-	private initializeRoutes(): void {
+	private setupRoutes(): void {
 		this.app.get('/', (_req: Request, res: Response, _next: NextFunction) => {
 			return res
 				.status(200)
@@ -55,7 +55,11 @@ class Server {
 		this.app.get(
 			'/health',
 			(_req: Request, res: Response, _next: NextFunction) => {
-				return res.status(200).json({ status: 'OK' });
+				return res.status(200).json({
+					status: 'OK',
+					timestamp: new Date().toISOString(),
+					uptime: process.uptime()
+				});
 			}
 		);
 
@@ -63,16 +67,16 @@ class Server {
 		AppRouter(this.app, this.modules);
 	}
 
-	private initializeErrorHandler(): void {
+	private setupErrorHandling(): void {
 		this.app.use(notFound);
 		this.app.use(errorHandler());
 	}
 
 	public start(): void {
-		this.initializeMiddlewares();
-		this.mountModules();
-		this.initializeRoutes();
-		this.initializeErrorHandler();
+		this.setupMiddlewares();
+		this.setupModules();
+		this.setupRoutes();
+		this.setupErrorHandling();
 		this.listen();
 	}
 }

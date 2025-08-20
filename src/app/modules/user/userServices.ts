@@ -5,7 +5,8 @@ import {
 	UserQuery,
 	UserRole,
 	UserSelect,
-	UserType
+	UserType,
+	UserWhereClause
 } from './userTypes';
 import PasswordProvider from '@/app/core/providers/passwordProvider';
 import { ConflictError, NotFoundError } from '@/app/core/errors';
@@ -25,7 +26,9 @@ class UserServices {
 	): Promise<{ total: number; data: UserType[] }> {
 		const { page = 1, limit = 10, search } = query;
 		const skip = (page - 1) * limit;
-		const where: any = {};
+		const where: UserWhereClause = {
+			isActive: true // only fetch active users by default
+		};
 
 		// Search
 		if (search) {
@@ -69,10 +72,6 @@ class UserServices {
 			select: UserSelect
 		});
 
-		if (!user) {
-			throw new NotFoundError('No users found with this email');
-		}
-
 		return user;
 	}
 
@@ -80,10 +79,8 @@ class UserServices {
 		const { firstName, lastName, email, password, role, isActive } = userData;
 
 		// Check if user exsist
-		const isUserExsist = await this.prisma.user.findUnique({
-			where: { email }
-		});
-		if (isUserExsist) {
+		const existingUser = await this.getUserByEmail(email);
+		if (existingUser) {
 			throw new ConflictError('Unable to use this email address');
 		}
 
@@ -91,19 +88,37 @@ class UserServices {
 		const hashedPassword = await this.passwordProvider.hash(password);
 
 		// First User is Admin
-		const count = await this.countUsers();
-		const userRole: UserRole = count === 0 ? 'ADMIN' : role ?? 'MEMBER';
+		// const count = await this.countUsers();
+		// const userRole: UserRole = count === 0 ? 'ADMIN' : role ?? 'MEMBER';
 
-		return this.prisma.user.create({
-			data: {
-				firstName,
-				lastName,
-				email,
-				password: hashedPassword,
-				role: userRole,
-				isActive: isActive ?? true
-			},
-			select: UserSelect
+		// return this.prisma.user.create({
+		// 	data: {
+		// 		firstName,
+		// 		lastName,
+		// 		email,
+		// 		password: hashedPassword,
+		// 		role: userRole,
+		// 		isActive: isActive ?? true
+		// 	},
+		// 	select: UserSelect
+		// });
+
+		// First User is Admin - using prisma transaction to avoid race conditions
+		return this.prisma.$transaction(async (tx) => {
+			const userCount = await tx.user.count();
+			const userRole: UserRole = userCount === 0 ? 'ADMIN' : role ?? 'MEMBER';
+
+			return tx.user.create({
+				data: {
+					firstName,
+					lastName,
+					email,
+					password: hashedPassword,
+					role: userRole,
+					isActive: isActive ?? true
+				},
+				select: UserSelect
+			});
 		});
 	}
 
