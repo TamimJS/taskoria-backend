@@ -1,6 +1,20 @@
 import { UserModule } from '@/app/modules/user/userTypes';
 import { PrismaClient } from '@/generated/prisma';
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+import {
+	Express,
+	Request,
+	Response,
+	NextFunction,
+	RequestHandler
+} from 'express';
+
+declare global {
+	namespace Express {
+		interface Request {
+			validated?: Partial<Record<'body' | 'query' | 'params', unknown>>;
+		}
+	}
+}
 
 export type AsyncHandler<
 	Req extends Request = Request,

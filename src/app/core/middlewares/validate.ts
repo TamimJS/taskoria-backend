@@ -7,14 +7,24 @@ const validate = (
 	source: 'body' | 'query' | 'params' = 'body'
 ): RequestHandler => {
 	return async (req: Request, res: Response, next: NextFunction) => {
-		const dto = (req as any)[source];
+		const dto =
+			source === 'body'
+				? req.body
+				: source === 'params'
+				? req.params
+				: req.query;
 		const result = await schema.safeParseAsync(dto);
 
 		if (!result.success) {
 			throw fromZod(result.error);
 		}
 
-		(req as any)[source] = result.data;
+		req.validated ??= {};
+		req.validated[source] = result.data;
+
+		if (source === 'body') {
+			req.body = result.data;
+		}
 		return next();
 	};
 };

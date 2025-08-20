@@ -2,6 +2,7 @@ import { PrismaClient } from '@/generated/prisma';
 import {
 	CreateUserDTO,
 	UpdateUserDTO,
+	UserQuery,
 	UserRole,
 	UserSelect,
 	UserType
@@ -19,10 +20,34 @@ class UserServices {
 		return this.prisma.user.count();
 	}
 
-	public async getUsers(): Promise<UserType[]> {
-		return this.prisma.user.findMany({
-			select: UserSelect
-		});
+	public async getUsers(
+		query: UserQuery = {}
+	): Promise<{ total: number; data: UserType[] }> {
+		const { page = 1, limit = 10, search } = query;
+		const skip = (page - 1) * limit;
+		const where: any = {};
+
+		// Search
+		if (search) {
+			where.OR = [
+				{ firstName: { contains: search, mode: 'insensitive' } },
+				{ lastName: { contains: search, mode: 'insensitive' } },
+				{ email: { contains: search, mode: 'insensitive' } }
+			];
+		}
+
+		const [users, total] = await Promise.all([
+			this.prisma.user.findMany({
+				where,
+				select: UserSelect,
+				skip,
+				take: limit,
+				orderBy: { createdAt: 'desc' }
+			}),
+			this.prisma.user.count({ where })
+		]);
+
+		return { total, data: users };
 	}
 
 	public async getUserById(id: string): Promise<UserType | null> {

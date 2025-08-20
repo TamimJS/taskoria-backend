@@ -1,18 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import UserServices from './userServices';
 import HTTP_STATUS from '@/app/core/lib/httpStatus';
-import { CreateUserDTO, UpdateUserDTO } from './userTypes';
+import { CreateUserDTO, UpdateUserDTO, UserQuery } from './userTypes';
 
 class UserController {
 	constructor(private services: UserServices) {}
 
 	public async handleGetUsers(req: Request, res: Response, next: NextFunction) {
-		const users = await this.services.getUsers();
-		const count = await this.services.countUsers();
+		const query = (req.validated?.query ?? {}) as UserQuery;
+		const users = await this.services.getUsers(query);
 
 		return res.status(HTTP_STATUS.OK).json({
 			status: 'success',
-			count,
+			meta: {
+				total: users.total,
+				page: req.query.page || 1,
+				limit: req.query.limit || 10
+			},
 			data: users
 		});
 	}
