@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import UserServices from './userServices';
 import HTTP_STATUS from '@/app/core/lib/httpStatus';
-import { CreateUserDTO, UpdateUserDTO, UserQuery } from './userTypes';
+import { TUserCreateDTO, TUserQuery, TUserUpdateDTO } from './userTypes';
 
 class UserController {
 	constructor(private services: UserServices) {}
 
 	public async handleGetUsers(req: Request, res: Response, next: NextFunction) {
-		const query = (req.validated?.query ?? {}) as UserQuery;
+		const query = (req.validated?.query ?? {}) as TUserQuery;
 		const users = await this.services.getUsers(query);
 
 		return res.status(HTTP_STATUS.OK).json({
@@ -35,7 +35,7 @@ class UserController {
 	}
 
 	public async handlePostUsers(
-		req: Request<{}, {}, CreateUserDTO>,
+		req: Request<{}, {}, TUserCreateDTO>,
 		res: Response,
 		next: NextFunction
 	) {
@@ -49,7 +49,7 @@ class UserController {
 	}
 
 	public async handlePutUser(
-		req: Request<{ id: string }, {}, UpdateUserDTO>,
+		req: Request<{ id: string }, {}, TUserUpdateDTO>,
 		res: Response,
 		next: NextFunction
 	) {

@@ -1,12 +1,11 @@
 import { PrismaClient } from '@/generated/prisma';
 import {
-	CreateUserDTO,
-	UpdateUserDTO,
-	UserQuery,
-	UserRole,
-	UserSelect,
-	UserType,
-	UserWhereClause
+	TUserCreateDTO,
+	TUserQuery,
+	TUserUpdateDTO,
+	TUserWhereClause,
+	TUserWithoutPassword,
+	UserWithoutPasswordSelect
 } from './userTypes';
 import PasswordProvider from '@/app/core/providers/passwordProvider';
 import { ConflictError, NotFoundError } from '@/app/core/errors';
@@ -22,11 +21,11 @@ class UserServices {
 	}
 
 	public async getUsers(
-		query: UserQuery = {}
-	): Promise<{ total: number; data: UserType[] }> {
+		query: TUserQuery = {}
+	): Promise<{ total: number; data: TUserWithoutPassword[] }> {
 		const { page = 1, limit = 10, search } = query;
 		const skip = (page - 1) * limit;
-		const where: UserWhereClause = {
+		const where: TUserWhereClause = {
 			isActive: true // only fetch active users by default
 		};
 
@@ -42,7 +41,7 @@ class UserServices {
 		const [users, total] = await Promise.all([
 			this.prisma.user.findMany({
 				where,
-				select: UserSelect,
+				select: UserWithoutPasswordSelect,
 				skip,
 				take: limit,
 				orderBy: { createdAt: 'desc' }
@@ -53,10 +52,10 @@ class UserServices {
 		return { total, data: users };
 	}
 
-	public async getUserById(id: string): Promise<UserType | null> {
+	public async getUserById(id: string): Promise<TUserWithoutPassword | null> {
 		const user = await this.prisma.user.findFirst({
 			where: { id },
-			select: UserSelect
+			select: UserWithoutPasswordSelect
 		});
 
 		if (!user) {
@@ -66,16 +65,20 @@ class UserServices {
 		return user;
 	}
 
-	public async getUserByEmail(email: string): Promise<UserType | null> {
+	public async getUserByEmail(
+		email: string
+	): Promise<TUserWithoutPassword | null> {
 		const user = await this.prisma.user.findUnique({
 			where: { email },
-			select: UserSelect
+			select: UserWithoutPasswordSelect
 		});
 
 		return user;
 	}
 
-	public async createUser(userData: CreateUserDTO): Promise<UserType> {
+	public async createUser(
+		userData: TUserCreateDTO
+	): Promise<TUserWithoutPassword> {
 		const { firstName, lastName, email, password, role, isActive } = userData;
 
 		// Check if user exsist
@@ -87,45 +90,23 @@ class UserServices {
 		// Hash Password
 		const hashedPassword = await this.passwordProvider.hash(password);
 
-		// First User is Admin
-		// const count = await this.countUsers();
-		// const userRole: UserRole = count === 0 ? 'ADMIN' : role ?? 'MEMBER';
-
-		// return this.prisma.user.create({
-		// 	data: {
-		// 		firstName,
-		// 		lastName,
-		// 		email,
-		// 		password: hashedPassword,
-		// 		role: userRole,
-		// 		isActive: isActive ?? true
-		// 	},
-		// 	select: UserSelect
-		// });
-
-		// First User is Admin - using prisma transaction to avoid race conditions
-		return this.prisma.$transaction(async (tx) => {
-			const userCount = await tx.user.count();
-			const userRole: UserRole = userCount === 0 ? 'ADMIN' : role ?? 'MEMBER';
-
-			return tx.user.create({
-				data: {
-					firstName,
-					lastName,
-					email,
-					password: hashedPassword,
-					role: userRole,
-					isActive: isActive ?? true
-				},
-				select: UserSelect
-			});
+		return this.prisma.user.create({
+			data: {
+				firstName,
+				lastName,
+				email,
+				password: hashedPassword,
+				role: role ?? 'MEMBER',
+				isActive: isActive ?? true
+			},
+			select: UserWithoutPasswordSelect
 		});
 	}
 
 	public async updateUser(
 		id: string,
-		userData: UpdateUserDTO
-	): Promise<UserType> {
+		userData: TUserUpdateDTO
+	): Promise<TUserWithoutPassword> {
 		// check existence first
 		await this.getUserById(id);
 
@@ -139,7 +120,7 @@ class UserServices {
 				role,
 				isActive
 			},
-			select: UserSelect
+			select: UserWithoutPasswordSelect
 		});
 
 		return user;

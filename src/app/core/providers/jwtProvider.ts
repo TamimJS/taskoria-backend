@@ -1,7 +1,7 @@
-import jwt from 'jsonwebtoken';
+import JWT, { JwtPayload, SignOptions } from 'jsonwebtoken';
 import config from '@/config';
 
-export interface TokenPayload {
+export interface TokenPayload extends JwtPayload {
 	userId: string;
 	email: string;
 	role: string;
@@ -29,13 +29,13 @@ class JWTProvider {
 		}
 	}
 
-	public generateTokens(payload: TokenPayload): GeneratedTokens {
-		const accessToken = jwt.sign(payload, this.accessSecret, {
-			expiresIn: this.accessExpiresIn
+	public async generateTokens(payload: TokenPayload): Promise<GeneratedTokens> {
+		const accessToken = JWT.sign(payload, this.accessSecret, {
+			expiresIn: this.accessExpiresIn as JWT.SignOptions['expiresIn']
 		});
 
-		const refreshToken = jwt.sign(payload, this.refreshSecret, {
-			expiresIn: this.refreshExpiresIn
+		const refreshToken = JWT.sign(payload, this.refreshSecret, {
+			expiresIn: this.refreshExpiresIn as JWT.SignOptions['expiresIn']
 		});
 
 		return { accessToken, refreshToken };
@@ -43,7 +43,7 @@ class JWTProvider {
 
 	public verifyAccessToken(token: string): TokenPayload {
 		try {
-			return jwt.verify(token, this.accessSecret) as TokenPayload;
+			return JWT.verify(token, this.accessSecret) as TokenPayload;
 		} catch (error) {
 			throw new Error('Invalid or expired access token');
 		}
@@ -51,15 +51,15 @@ class JWTProvider {
 
 	public verifyRefreshToken(token: string): TokenPayload {
 		try {
-			return jwt.verify(token, this.refreshSecret) as TokenPayload;
+			return JWT.verify(token, this.refreshSecret) as TokenPayload;
 		} catch (error) {
 			throw new Error('Invalid or expired refresh token');
 		}
 	}
 
-	public decodeToken(token: string): TokenPayload | null {
+	public async decodeToken(token: string): Promise<TokenPayload | null> {
 		try {
-			return jwt.decode(token) as TokenPayload;
+			return JWT.decode(token) as TokenPayload;
 		} catch (error) {
 			return null;
 		}

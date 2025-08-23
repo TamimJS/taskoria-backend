@@ -20,6 +20,11 @@ model User {
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
 
+  @@index([isActive]) // For filtering active/inactive users
+  @@index([role]) // For role-based queries
+  @@index([createdAt]) // For pagination and analytics
+  @@index([firstName, lastName]) // For full-name search optimization
+  @@index([email, isActive]) // Compound index for common auth queries
   @@map("users")
 }
 
@@ -32,6 +37,10 @@ model RefreshToken {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, revoked]) // For finding user's active tokens
+  @@index([token]) // Already unique, but explicit index
+  @@index([expiresAt]) // For token cleanup cron jobs
+  @@index([createdAt]) // For analytics and cleanup
   @@map("refresh_tokens")
 }
 

@@ -1,3 +1,6 @@
+import JWTProvider from '@/app/core/providers/jwtProvider';
+import PasswordProvider from '@/app/core/providers/passwordProvider';
+import { AuthModule } from '@/app/modules/auth/authTypes';
 import { UserModule } from '@/app/modules/user/userTypes';
 import { PrismaClient } from '@/generated/prisma';
 import {
@@ -27,10 +30,18 @@ export type AsyncHandlerWrapper = (
 
 export type ServerDeps = {
 	prisma: PrismaClient;
+	passwordProvider: PasswordProvider;
+	jwtProvider: JWTProvider;
+};
+
+export type AppProivders = {
+	passwordProvider: PasswordProvider;
+	jwtProvider: JWTProvider;
 };
 
 export type Modules = {
 	user: UserModule;
+	auth: AuthModule;
 };
 
 export type ErrorJSON = {

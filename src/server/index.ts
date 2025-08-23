@@ -9,6 +9,7 @@ import CreateUserModule from '@/app/modules/user';
 import AppRouter from '@/app/core/router';
 import notFound from '@/app/core/middlewares/notFound';
 import { errorHandler } from '@/app/core/middlewares/errorHandler';
+import CreateAuthModule from '@/app/modules/auth';
 
 class Server {
 	private app: Application;
@@ -43,7 +44,15 @@ class Server {
 	}
 
 	private setupModules(): void {
-		this.modules.user = CreateUserModule({ prisma: this.deps.prisma });
+		this.modules.user = CreateUserModule({
+			prisma: this.deps.prisma,
+			passwordProvider: this.deps.passwordProvider
+		});
+		this.modules.auth = CreateAuthModule({
+			prisma: this.deps.prisma,
+			passwordProvider: this.deps.passwordProvider,
+			jwtProvider: this.deps.jwtProvider
+		});
 	}
 
 	private setupRoutes(): void {
